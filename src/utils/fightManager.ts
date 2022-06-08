@@ -1,9 +1,12 @@
 // Imports.
-import { channel } from "diagnostics_channel";
 import { Client, VoiceState, Collection, VoiceChannel } from "discord.js";
-import { MINIMUM_MEMBERS, ODDS_OUT_OF_HUNDRED, FREQUENCY_MS, COOLDOWN } from '../config.json';
-import fs from 'fs';
-import ytdl from 'ytdl-core';
+import { 
+    MIN_MEMBERS, 
+    ODDS_OUT_OF_HUNDRED, 
+    FREQUENCY_MS, 
+    MIN_COOLDOWN, 
+    MAX_COOLDOWN 
+} from '../config.json';
 import { createAudioPlayer, createAudioResource, joinVoiceChannel } from "@discordjs/voice";
 
 type ActiveGuild = {
@@ -33,7 +36,7 @@ export function manager(client: Client) {
             if (activeGuilds.get(newState.guild.id)!.active) return; // If the guild is already set as active, return.
             if (!channel!.isVoice()) return; // If it isn't a voice channel, return.
             if (!channel.joinable) return; // If it isn't joinable, return.
-            if (channel.members.size < MINIMUM_MEMBERS) return; // If the call is too small, return.
+            if (channel.members.size < MIN_MEMBERS) return; // If the call is too small, return.
             
             // Set the guild as active.
             activeGuilds.set(newState.guild.id, { id: cachedInfo!.id, active: true, cooldownEnd: cachedInfo!.cooldownEnd });
@@ -42,7 +45,7 @@ export function manager(client: Client) {
     setTimeout(pickAFight, FREQUENCY_MS, client);
 }
 
-function pickAFight(client: Client) {
+async function pickAFight(client: Client) {
     const guilds = [...activeGuilds.clone().filter(guild => guild.active && Date.now() >= guild.cooldownEnd).values()];
     
     guilds.forEach(guildInfo => {
@@ -55,7 +58,7 @@ function pickAFight(client: Client) {
         if (!guild) return activeGuilds.delete(guildInfo.id);
         
         // Retrieve a list of "active" channels.
-        const channels = guild.channels.cache.filter(c => c.type === 'GUILD_VOICE' && c.members.size >= MINIMUM_MEMBERS);
+        const channels = guild.channels.cache.filter(c => c.type === 'GUILD_VOICE' && c.members.size >= MIN_MEMBERS);
 
         // If there are no active channels, delete the guild from active guilds and return.
         if (channels.size < 1) return activeGuilds.delete(guildInfo.id);
@@ -78,6 +81,10 @@ function pickAFight(client: Client) {
         connection.subscribe(player);
         player.play(resource);
 
+        const COOLDOWN = Math.random() * (MAX_COOLDOWN - MIN_COOLDOWN) + MIN_COOLDOWN;
+
+        activeGuilds.set(guildInfo.id, { active: true, id: guildInfo.id, cooldownEnd: Date.now()+COOLDOWN });
+
         setTimeout(() => {
             player.stop();
             connection.destroy();
@@ -86,8 +93,7 @@ function pickAFight(client: Client) {
             } catch (e) {
                 console.log(e);
             }
-        }, 14000);
-        activeGuilds.set(guildInfo.id, { active: true, id: guildInfo.id, cooldownEnd: Date.now()+COOLDOWN })        
+        }, 14000);       
     });
 
     setTimeout(pickAFight, FREQUENCY_MS, client);
