@@ -1,4 +1,6 @@
 # JohnCenaBot
+This Discord Bot is Archived. I'm only keeping it public as it represents my Journey in learning to code.
+
 ## Description
 A basic discord bot written in TypeScript that will randomly join active voice calls and play a really loud John Cena audio file before leaving the call and taking one of the calls members along with it.
 
